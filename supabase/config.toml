@@ -1,0 +1,9 @@
+# Minimal Supabase CLI config for inventario-conf (remote project armado-ch, ref uuqqtksxlgkztenojufm).
+project_id = "inventario-conf"
+
+# Apps Script and the anon app send no Supabase JWT; both functions check their own secret instead.
+[functions.sheet-ingest]
+verify_jwt = false
+
+[functions.ic-admin]
+verify_jwt = false
