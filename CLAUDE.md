@@ -1,7 +1,7 @@
 # inventario-conf
 
 Confirmación de inventario: generates and tracks each micro hub's 4-week confirmation plan.
-Spec: `docs/inventarioConf-v1-plan.md`. Current phase: `docs/inventarioConf-phase0-setup.md`.
+Spec: `docs/inventarioConf-v1-plan.md`. Status and next steps: `HANDOFF.md` (update it at the end of each session).
 
 ## Stack
 - Vite + vanilla TypeScript, no framework. Vitest for tests (`npm test`).
