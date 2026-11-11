@@ -78,10 +78,10 @@ Full spec: `docs/inventarioConf-v1-plan.md`. Put it in the repo first.
 6. **Secrets:** `INGEST_SECRET`, `IC_ADMIN_PIN`. Set them with `supabase secrets set`, never commit them.
 
 7. **Tiers in Masterview** (cross-repo, small):
-   - Migration `0003_mv_tiers.sql`: `alter table mv_product_city add column tiers text;`. This applies to the shared table, so coordinate it with the unify-Masterview plan.
+   - Migration `0005_mv_tiers.sql`: `alter table mv_product_city add column tiers text;`. This applies to the shared table, so coordinate it with the unify-Masterview plan. **Written, on hold** in `supabase/pending/` until Jose confirms; move it to `supabase/migrations/` to apply.
    - **In the `calii-invoice-reader` repo:** the Masterview admin upload maps the `Tiers` header into `mv_product_city.tiers` for each city. Run it in a separate Claude Code session in that repo.
    - Re-upload the 4 city files once, then check that Monterrey has tiers for the bulk of its SKUs and that a few spot-checks match `Download`.
-   - Add `ic_hub_config.city` (monterrey | saltillo | cdmx | guadalajara) to the seed.
+   - ~~Add `ic_hub_config.city` (monterrey | saltillo | cdmx | guadalajara) to the seed.~~ Done in `0004_ic_hub_profiles.sql` (with `cycle_weeks`, `rotation_mode`, `walking_order`; Condesa/Zapopan → Mon–Fri). `mv_product_city.city` is capitalized (`Monterrey`, `CDMX`), so join on `lower(city)`.
 
 ## 0.3 Apps Script bridge (in Jose's Google account)
 
