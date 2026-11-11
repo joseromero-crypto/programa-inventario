@@ -41,7 +41,7 @@ export function buildReport(x: ReportInput): LoadReport {
     const its = x.slots.flatMap((s) => s.items).filter((i) => i.layer === layer);
     const keys = new Set(its.map((i) => i.unitKey));
     const cl = sum(its.map((i) => i.load));
-    return { layer, units: keys.size, skus: sum([...keys].map((k) => unitByKey.get(k)?.count ?? 0)), perWeek: cl / W, cycleLoad: cl };
+    return { layer, units: keys.size, skus: r0(sum([...keys].map((k) => (unitByKey.get(k)?.count ?? 0) + (unitByKey.get(k)?.looseCount ?? 0)))), perWeek: cl / W, cycleLoad: cl };
   });
 
   const roles: RoleLoad[] = x.roles.map((role) => {

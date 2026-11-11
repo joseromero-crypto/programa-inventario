@@ -107,7 +107,6 @@ describe('normalize (spec 4.1, hub-rules 2.4)', () => {
     expect(n.units.map((u) => [u.key, u.kind])).toEqual([
       ['B01', 'freezer'],
       ['D-3', 'shelf'],
-      ['D (sin estante)', 'aisle_only'],
       ['Sin identificar: G}', 'unidentified'],
       ['M-1', 'shelf'],
       ['Cuarto frío Q', 'cold_room'],
@@ -115,6 +114,7 @@ describe('normalize (spec 4.1, hub-rules 2.4)', () => {
   });
   it('raises every exception type', () => {
     expect(codes('AISLE_ONLY')).toEqual(['2']);
+    expect(n.exceptions.find((e) => e.code === 'AISLE_ONLY')).toMatchObject({ unitKey: null, aisle: 'D' });
     expect(codes('NO_POSITION')).toEqual(['3']);
     expect(codes('FROZEN_NO_FREEZER').sort()).toEqual(['4', '5']);
     expect(codes('UNKNOWN_CODE')).toEqual(['6']);
@@ -125,11 +125,18 @@ describe('normalize (spec 4.1, hub-rules 2.4)', () => {
     expect(n.dropped).toEqual({ fyv: 1, ignored: 1 });
     expect(n.units.flatMap((u) => u.skus.map((s) => s.barcode))).not.toContain('9');
   });
+  it('puts sin-estante load on the aisle shelves, not on a stop of its own', () => {
+    const d3 = n.units.find((u) => u.key === 'D-3')!;
+    expect(d3.looseCount).toBe(1); // D-3 is the only shelf of aisle D
+    expect(d3.load).toBe(1 + 0.5 + 0); // its own 1.5 + barcode 2 (stock 0)
+    const only = normalize({ rules: CONTRY_RULES, sorting: [{ name: 'x', barcode: '2', pasillo: 'K', estante: '', nivel: '', temp: 'Ambiente' }], products, tiers: () => ({ tier0: false, sales: null, rank: null }), stock: {}, sizingBasis: 'catalog', walkingOrder: [] });
+    expect(only.units.map((u) => [u.key, u.kind])).toEqual([['K (sin estante)', 'aisle_only']]); // aisle without shelves keeps one stop
+  });
   it('sizes unknown-stock SKUs at the hub positive ratio', () => {
     expect(n.positiveRatio).toBe(0.5); // S1 > 0, S2 = 0
     const d3 = n.units.find((u) => u.key === 'D-3')!;
     expect(d3.count).toBe(2);
-    expect(d3.positiveEst).toBe(1 + 0.5); // barcode 1 has stock, barcode 8 unknown
+    expect(d3.positiveEst).toBe(1 + 0.5 + 0); // barcode 1 has stock, 8 unknown, sin-estante 2 has none
   });
 });
 

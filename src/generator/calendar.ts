@@ -38,7 +38,7 @@ export const free = (s: Slot) => Math.max(0, s.capacity - used(s));
 export const slack = (slots: Slot[]) => slots.reduce((t, s) => t + s.capacity - used(s), 0);
 
 export function addItem(slot: Slot, unit: Unit, layer: Layer): void {
-  slot.items.push({ unitKey: unit.key, layer, load: unit.load, count: unit.count });
+  slot.items.push({ unitKey: unit.key, layer, load: unit.load, count: unit.count, looseCount: unit.looseCount });
 }
 
 /**

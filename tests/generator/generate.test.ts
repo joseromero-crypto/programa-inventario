@@ -35,7 +35,8 @@ describe('generate on Contry (physical, 4 weeks)', () => {
     const scheduled = new Set(items(plan).map((i) => i.unitKey));
     const onUnits = new Set(plan.units.filter((u) => scheduled.has(u.key)).flatMap((u) => u.skus.map((s) => s.barcode)));
     expect(plan.units.every((u) => scheduled.has(u.key))).toBe(true);
-    const looseExc = new Set(plan.exceptions.filter((e) => e.unitKey === null).map((e) => e.barcode));
+    const scheduledAisles = new Set(plan.units.filter((u) => u.kind === 'shelf' && scheduled.has(u.key)).map((u) => u.aisle));
+    const looseExc = new Set(plan.exceptions.filter((e) => e.unitKey === null && (e.code !== 'AISLE_ONLY' || scheduledAisles.has(e.aisle!))).map((e) => e.barcode));
     const fyv = new Set(input.products.filter((p) => p.category === 'fyv').map((p) => p.barcode));
     const missing = input.sorting.map((r) => r.barcode.trim()).filter((b) => b && !fyv.has(b) && !onUnits.has(b) && !looseExc.has(b));
     expect(missing).toEqual([]);
@@ -176,8 +177,10 @@ describe('config only (v1-plan section 8)', () => {
 
   it('walking order changes the run order', () => {
     const plan = generate(contryInput({}, { walkingOrder: ['M', 'D'] }));
-    const am = items(plan, 'rotation').filter((i) => ['lider_am', 'lider_pm', 'aux_rec'].includes(i.s.role));
-    expect(am[0]!.unitKey.startsWith('M')).toBe(true);
+    // Sections are walked lider_am → lider_pm → aux_rec → aux_inv; the first non-empty one starts the walk.
+    const start = (p: Plan) => ['lider_am', 'lider_pm', 'aux_rec', 'aux_inv'].map((r) => p.report.roles.find((x) => x.role === r)!.section).find((x) => x !== '')!;
+    expect(start(plan)).toMatch(/^M-/);
+    expect(start(generate(contryInput()))).toMatch(/^D-/);
   });
 
   it('rejects a cycle start that is not a Monday', () => {

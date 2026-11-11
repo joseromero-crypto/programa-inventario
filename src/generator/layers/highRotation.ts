@@ -64,7 +64,7 @@ export function selectHighRotation(candidates: Unit[], weekly: Unit[], spare: nu
     units,
     coverage,
     usefulSkus: units.reduce((s, u) => s + u.skus.filter((k) => targeted.has(tierOf(k) ?? '')).length, 0),
-    totalSkus: units.reduce((s, u) => s + u.count, 0),
+    totalSkus: Math.round(units.reduce((s, u) => s + u.count + u.looseCount, 0)),
     spareBefore: spare,
     spareAfter: left,
   };

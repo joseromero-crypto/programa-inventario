@@ -101,9 +101,12 @@ export interface Unit {
   aisle: string; // raw aisle code it belongs to
   estante: string; // '' for whole-aisle units
   skus: Sku[];
-  count: number; // SKUs
-  positiveEst: number; // SKUs expected with stock
-  load: number; // count or positiveEst, per sizing_basis
+  count: number; // SKUs placed on this location
+  /** Share of the aisle's sin-estante SKUs expected here (fractional). They sit on some shelf of the
+   *  aisle with no spot in Retool, so they get confirmed when the aisle's shelves are visited. */
+  looseCount: number;
+  positiveEst: number; // SKUs expected with stock, loose share included
+  load: number; // count or positiveEst (both with the loose share), per sizing_basis
   carnes: boolean; // mostly Carnes → owned by aux_inv
 }
 
@@ -118,6 +121,8 @@ export interface PlanException {
   owner: RoleKey;
   /** Location where it is planned, when it has one. */
   unitKey: string | null;
+  /** AISLE_ONLY: the aisle whose shelves cover it. */
+  aisle: string | null;
 }
 
 // ───────────── output ─────────────
@@ -128,7 +133,8 @@ export interface SlotItem {
   unitKey: string;
   layer: Layer;
   load: number;
-  count: number;
+  count: number; // SKUs placed on the location
+  looseCount: number; // estimated sin-estante SKUs of the aisle confirmed here
 }
 
 export interface Slot {

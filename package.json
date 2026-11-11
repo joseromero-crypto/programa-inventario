@@ -15,6 +15,7 @@
     "@supabase/supabase-js": "^2.119.0"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.5.16",
     "supabase": "^3.1.0",
     "typescript": "^7.0.2",
     "vite": "^8.3.7",

@@ -43,9 +43,9 @@ interface Draft {
   barcodes: Set<string>;
 }
 
-export function finishUnit(d: Omit<Draft, 'barcodes'>, basis: SizingBasis): Unit {
+export function finishUnit(d: Omit<Draft, 'barcodes'>, basis: SizingBasis, loose: { count: number; positive: number } = { count: 0, positive: 0 }): Unit {
   const count = d.skus.length;
-  const positiveEst = d.skus.reduce((s, k) => s + k.positive, 0);
+  const positiveEst = d.skus.reduce((s, k) => s + k.positive, 0) + loose.positive;
   const carnes = d.skus.filter((k) => k.category === 'carnes').length;
   return {
     key: d.key,
@@ -54,8 +54,9 @@ export function finishUnit(d: Omit<Draft, 'barcodes'>, basis: SizingBasis): Unit
     estante: d.estante,
     skus: d.skus,
     count,
+    looseCount: loose.count,
     positiveEst,
-    load: basis === 'catalog' ? count : positiveEst,
+    load: basis === 'catalog' ? count + loose.count : positiveEst,
     carnes: carnes * 2 > count,
   };
 }
@@ -89,8 +90,10 @@ export function normalize(input: NormalizeInput): Normalized {
       positive: q === undefined ? ratio : q > 0 ? 1 : 0,
     };
   };
-  const exc = (code: PlanException['code'], x: (typeof kept)[number], rawPos: string, unitKey: string | null) =>
-    exceptions.push({ code, barcode: x.barcode, sku: x.product?.sku ?? null, name: String(x.r.name ?? '').trim(), rawPos, owner: 'aux_inv', unitKey });
+  const exc = (code: PlanException['code'], x: (typeof kept)[number], rawPos: string, unitKey: string | null, aisle: string | null = null) =>
+    exceptions.push({ code, barcode: x.barcode, sku: x.product?.sku ?? null, name: String(x.r.name ?? '').trim(), rawPos, owner: 'aux_inv', unitKey, aisle });
+  // aisle → its sin-estante rows (no stop of their own: they're confirmed with the aisle's shelves)
+  const loose = new Map<string, { x: (typeof kept)[number]; rawPos: string }[]>();
   const place = (x: (typeof kept)[number], key: string, kind: UnitKind, aisle: string, estante: string) => {
     let d = drafts.get(key);
     if (!d) drafts.set(key, (d = { key, kind, aisle, estante, skus: [], barcodes: new Set() }));
@@ -127,9 +130,11 @@ export function normalize(input: NormalizeInput): Normalized {
       exc('FROZEN_NO_FREEZER', x, rawPos, null);
       continue;
     } else if (estante === '') {
-      key = `${m.unit_key} (sin estante)`;
-      place(x, key, 'aisle_only', m.unit_key, '');
-      exc('AISLE_ONLY', x, rawPos, key);
+      const list = loose.get(m.unit_key) ?? [];
+      list.push({ x, rawPos });
+      loose.set(m.unit_key, list);
+      if (!x.product) exc('NOT_IN_MV', x, rawPos, null, m.unit_key);
+      continue;
     } else {
       key = `${m.unit_key}-${estante}`;
       place(x, key, 'shelf', m.unit_key, estante);
@@ -139,7 +144,29 @@ export function normalize(input: NormalizeInput): Normalized {
     seen.add(x.barcode);
   }
 
-  const units = [...drafts.values()].map((d) => finishUnit(d, input.sizingBasis)).sort(unitComparator(input.walkingOrder));
+  // Sin-estante SKUs: spread over the aisle's shelves, by how many SKUs each shelf holds. A SKU that
+  // also has a full position is already planned there. An aisle with no shelves keeps one stop.
+  const placed = new Set([...drafts.values()].flatMap((d) => [...d.barcodes]));
+  const share = new Map<string, { count: number; positive: number }>();
+  for (const [aisle, rows] of [...loose].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))) {
+    const fresh = rows.filter((r, i) => !placed.has(r.x.barcode) && rows.findIndex((q) => q.x.barcode === r.x.barcode) === i);
+    if (fresh.length === 0) continue;
+    const shelves = [...drafts.values()].filter((d) => d.kind === 'shelf' && d.aisle === aisle);
+    if (shelves.length === 0) {
+      for (const r of fresh) place(r.x, `${aisle} (sin estante)`, 'aisle_only', aisle, '');
+      for (const r of fresh) exc('AISLE_ONLY', r.x, r.rawPos, `${aisle} (sin estante)`, aisle);
+      continue;
+    }
+    for (const r of fresh) exc('AISLE_ONLY', r.x, r.rawPos, null, aisle);
+    const total = shelves.reduce((s, d) => s + d.skus.length, 0);
+    const pos = fresh.reduce((s, r) => s + toSku(r.x).positive, 0);
+    for (const d of shelves) {
+      const w = d.skus.length / total;
+      share.set(d.key, { count: fresh.length * w, positive: pos * w });
+    }
+  }
+
+  const units = [...drafts.values()].map((d) => finishUnit(d, input.sizingBasis, share.get(d.key))).sort(unitComparator(input.walkingOrder));
   exceptions.sort((a, b) => (a.code < b.code ? -1 : a.code > b.code ? 1 : 0) || (a.rawPos < b.rawPos ? -1 : a.rawPos > b.rawPos ? 1 : 0) || (a.barcode < b.barcode ? -1 : a.barcode > b.barcode ? 1 : 0));
   return { units, exceptions, positiveRatio: ratio, dropped: { fyv: rows.length - kept.length, ignored } };
 }
