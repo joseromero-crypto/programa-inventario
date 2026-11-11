@@ -1,7 +1,12 @@
 // In-memory navigation. Every page load starts at the hub picker (no remembered state);
 // history entries carry the view so the phone's back button works inside the app.
 export interface HubRef { hub_slug: string; display_name: string }
-export type View = { name: 'picker' } | { name: 'hub'; hub: HubRef } | { name: 'fuentes'; hub?: HubRef };
+export type View =
+  | { name: 'picker' }
+  | { name: 'hub'; hub: HubRef }
+  | { name: 'fuentes'; hub?: HubRef }
+  | { name: 'plan'; hub: HubRef }
+  | { name: 'ruta'; hub: HubRef };
 
 type Renderer = (view: View) => void;
 let render: Renderer = () => {};

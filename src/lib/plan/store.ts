@@ -98,9 +98,9 @@ async function admin<T>(pin: string, body: AdminAction): Promise<T> {
   const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ic-admin`;
   let res: Response;
   try {
-    res = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json', 'x-admin-pin': pin }, body: JSON.stringify(body) });
+    res = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json', 'x-admin-pin': pin }, body: JSON.stringify(body), signal: AbortSignal.timeout(60_000) });
   } catch {
-    throw new AdminError('Sin conexión con el servidor. Intenta de nuevo.', 0);
+    throw new AdminError('Sin respuesta del servidor. Intenta de nuevo.', 0);
   }
   const data = (await res.json().catch(() => ({}))) as { error?: string };
   if (!res.ok) throw new AdminError(data.error ?? `Error ${res.status}`, res.status);

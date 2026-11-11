@@ -26,12 +26,15 @@ const db = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SE
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
   if (req.method !== 'POST') return json({ error: 'method not allowed' }, 405, CORS);
+  // Read the whole body before answering, even on a wrong PIN: answering a large upload (a saved
+  // plan) before it is read leaves browsers waiting forever.
+  const text = await req.text();
   if (!(await secretMatches(req.headers.get('x-admin-pin'), Deno.env.get('IC_ADMIN_PIN')))) {
     return json({ error: 'PIN incorrecto' }, 401, CORS);
   }
   let body: unknown;
   try {
-    body = await req.json();
+    body = JSON.parse(text);
   } catch {
     return json({ error: 'invalid JSON' }, 400, CORS);
   }

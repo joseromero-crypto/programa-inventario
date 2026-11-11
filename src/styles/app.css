@@ -43,3 +43,67 @@
 .ic-spark-axis{display:flex;justify-content:space-between;font-size:12px}
 .ic-when{display:block;font-size:12px;font-weight:500;color:var(--c-muted);font-variant-numeric:tabular-nums}
 .ic-kv dd .c-tag{margin:4px 0 0 0}
+
+/* shared */
+.ic-small{font-size:12px}
+.ic-nowrap{white-space:nowrap}
+.ic-bar{display:block;height:8px;border-radius:var(--r-pill);background:var(--c-surface-hover);overflow:hidden}
+.ic-bar span{display:block;height:100%;border-radius:var(--r-pill);background:var(--c-teal-dark)}
+.ic-bar.is-over span{background:var(--c-ink)}
+.ic-modal .c-stack{margin-bottom:var(--s-4)}
+.ic-move-from{display:flex;flex-direction:column;gap:2px;font-size:14px}
+
+/* Plan */
+.ic-plan-top{display:flex;flex-direction:column;gap:var(--s-2)}
+.ic-actions{flex-wrap:wrap}
+.ic-banner b{font-size:16px}
+.ic-stats .c-stat-value{white-space:nowrap}
+.ic-roles{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:var(--s-3) var(--s-5)}
+.ic-role{display:flex;flex-direction:column;gap:6px;font-size:14px}
+.ic-msgs{display:flex;flex-direction:column;gap:6px;padding-left:18px;font-size:14px}
+.ic-week{display:flex;flex-direction:column;gap:var(--s-3)}
+.ic-week .c-seg{flex-wrap:wrap}
+.ic-grid{table-layout:fixed;min-width:860px}
+.ic-grid th:first-child{width:140px}
+.ic-grid thead th.is-today{color:var(--c-ink)}
+.ic-grid tbody th{text-align:left;vertical-align:top;padding:12px 14px;border-top:1px solid var(--c-line);font-size:14px;font-weight:700;display:table-cell}
+.ic-grid tbody th .ic-small{display:block;font-weight:500}
+.ic-grid td{vertical-align:top}
+.ic-grid tbody tr:hover{background:transparent}
+.ic-extra-row{background:var(--c-surface)}
+.ic-cell{display:flex;flex-direction:column;gap:6px;min-width:0}
+.ic-cell-nums{display:flex;flex-direction:column;font-size:13px;line-height:1.3}
+.ic-cell-nums b{font-size:14px;white-space:nowrap}
+.ic-cell-nums span{color:var(--c-muted);white-space:nowrap}
+.ic-layer{display:flex;flex-direction:column;gap:4px;margin-top:2px}
+.ic-layer-label{font-size:11px;font-weight:700;color:var(--c-muted)}
+.ic-units{display:flex;flex-wrap:wrap;gap:4px}
+.ic-unit{display:inline-flex;align-items:center;height:26px;padding:0 8px;border:1.5px solid transparent;border-radius:var(--r-xs);background:var(--c-surface);font-size:12px;font-weight:700;white-space:nowrap;color:var(--c-ink)}
+button.ic-unit{cursor:pointer}
+button.ic-unit:hover{background:var(--c-surface-hover);border-color:var(--c-line)}
+.ic-unit.is-moved{border-color:var(--c-ink)}
+.ic-note{font-size:12px;font-weight:600;color:var(--c-ink);background:var(--c-teal-light);border-radius:var(--r-xs);padding:4px 8px}
+.ic-exc{border-top:1px solid var(--c-line)}
+.ic-exc:first-of-type{border-top:none}
+.ic-exc summary{display:flex;align-items:center;justify-content:space-between;gap:var(--s-3);min-height:48px;cursor:pointer;font-size:14px;font-weight:700;list-style:none}
+.ic-exc summary::-webkit-details-marker{display:none}
+.ic-exc[open] summary{color:var(--c-teal-dark)}
+.ic-exc .c-table-wrap{background:var(--c-white);max-height:420px;overflow:auto;margin-bottom:var(--s-3)}
+
+/* Ruta del día */
+.ic-daynav{display:flex;align-items:center;gap:var(--s-3)}
+.ic-daynav-label{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;text-align:center}
+.ic-daynav-label b{font-size:18px;white-space:nowrap}
+.ic-date .c-input{max-width:220px}
+.ic-route-sum .c-cell b{white-space:nowrap}
+.ic-on-teal{color:var(--c-ink)}
+.ic-note-card{font-size:14px;font-weight:600;border-radius:var(--r-lg)}
+.ic-route{list-style:none;display:flex;flex-direction:column;gap:6px}
+.ic-stop{display:flex;gap:var(--s-3);align-items:flex-start;padding:14px var(--s-4);border-radius:18px;background:var(--c-surface)}
+.ic-stop-n{flex-shrink:0;width:28px;height:28px;border-radius:50%;background:var(--c-white);display:inline-flex;align-items:center;justify-content:center;font-size:13px;font-weight:800}
+.ic-stop-body{flex:1;min-width:0;display:flex;flex-direction:column;gap:6px}
+.ic-stop-key{font-size:20px;font-weight:800;letter-spacing:-.02em;white-space:nowrap}
+.ic-stop-nums{display:flex;flex-direction:column;gap:2px;font-size:14px;color:var(--c-muted)}
+.ic-stop-nums span{white-space:nowrap}
+.ic-stop-nums b{color:var(--c-ink);font-size:16px}
+.ic-tags{display:flex;flex-wrap:wrap;gap:4px}

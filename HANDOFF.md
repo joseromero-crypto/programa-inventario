@@ -3,16 +3,41 @@
 Newest first. Spec: `docs/inventarioConf-v1-plan.md` (hub-rules `docs/inventarioConf-hub-rules.md` wins where they differ).
 Generator details: `src/generator/README.md`.
 
-## Where things stand (2026-11-11)
-- **Done:** phase 0 (tables, sheet import, hub picker, Admin › Fuentes) and phase 1 (plan generator). Migrations 0001–0007
-  are applied on Supabase `armado-ch`.
-- **Not built:** the screens people use. Plan, Ruta del día and Seguimiento still say "Próximamente". The generator runs
-  only in tests and scratch runs; no plan has been saved yet.
-- **Not pushed:** everything after `dc706f2` is local only (`git status -sb` shows how many commits). The live site
-  has phase 0.1–0.4 (hub picker with the 7 MHs, as of `dc706f2`). The MH/CH names on screen, Fuentes and phase 1 go
-  live when Jose pushes from GitHub Desktop.
-- `npm test`: 87 passing. `npm run build`: green.
-- **Local preview:** `.claude/launch.json` → `dev` on port 5180.
+## Where things stand (2026-11-11, end of phase 2)
+- **Done:** phase 0, phase 1 (generator) and phase 2 (Plan and Ruta del día screens). Migrations 0001–0008 are applied
+  on Supabase `armado-ch`; `ic-admin` is deployed with the plan actions.
+- **Contry:** a draft plan is saved (plan id 2, cycle 1, 4 weeks from Mon Nov 9, 208 location visits). **Nothing is
+  active yet:** Jose activates it in Plan › Activar with the admin PIN. Until then Ruta del día says "no tiene un plan
+  activo".
+- **Not built:** Seguimiento, the weekly close, Configuración hub.
+- **Not pushed:** everything after `dc706f2` is local only. The screens go live when Jose pushes from GitHub Desktop.
+  The database side (0008, `ic-admin`) is already live, so the pushed site will work as soon as it builds.
+- `npm test`: 107 passing. `npm run build`: green.
+- **Local preview:** `.claude/launch.json` → `dev` on port 5180 (moves to 5181 when 5180 is taken).
+
+## 2026-11-11 — phase 2: Plan and Ruta del día (migration 0008)
+- **Inputs** (`src/lib/plan/inputs.ts`): hub config, roles, location rules, sorting, Masterview, tiers for the hub's
+  city, and stock from the new `ic_sku_stock(hub)` RPC (`[sku, last_qty]` only, no e-mails). Cycle start = Monday of
+  today (server clock, `ic_now()`); global anchor 2026-11-09. The generator runs in the browser.
+- **Saving** (`ic-admin`, PIN per action, never stored): `save_draft`, `move`, `activate`. Validation and Spanish errors
+  live in `supabase/functions/_shared/plan_admin.ts` (tested); each write is one SQL transaction
+  (`ic_plan_save_draft` / `ic_plan_move` / `ic_plan_activate`, service role only) and is logged in `ic_plan_log`.
+  - A new draft replaces the hub's previous draft (drafts aren't history). Active and closed plans are never touched.
+  - Moves: drafts only, one visit at a time, never into or out of a day that has passed. Moved visits are tagged.
+  - Activate: the previous active plan becomes `closed` with its rows untouched; one active plan per hub.
+  - `ic_slot_units` gained `positive_est` (esperados con stock) and `walk_rank` (walking order, so moved visits still
+    sort right). The report jsonb also stores the exception list (`exceptionList`).
+- **Plan screen:** Generar borrador (preview, nothing saved) → Guardar borrador → move chips → Activar. Week tabs, role ×
+  day grid with load bars (ink when over), overload banner with the suggested fix, report messages, role loads with
+  sections, exceptions grouped by type.
+- **Ruta del día:** phone-first, read-only. Day arrows + date, role chips, summary (ubicaciones / total SKUs / con
+  stock), notes, locations in walking order with tags (tier 0, congeladores grupo A/B, tiers semanales, rotación
+  mensual, cuarto frío, incluye ~N sin estante, movida por coordinador) and the extra "sin identificar" block.
+- **Bug fixed while testing:** `ic-admin` answered a wrong PIN before reading the uploaded plan, and browsers then hung
+  forever. It now reads the body first; the app also gives up after 60 s.
+- **How it was checked:** real Contry data in the browser (desktop and phone). The save and a test move ran through
+  the deployed function with the real PIN from the shell (the PIN never went into the browser). The Ruta screenshots
+  used the saved draft shown as if active in one browser tab, because activating is Jose's decision.
 
 ## 2026-11-11 — match by SKU, then name, then barcode (`e1d69df`, migration 0007)
 - Jose: barcodes can be wrong, change or be missing; the Calii SKU (3 letters + 3 digits) is always there. The sorting
@@ -184,7 +209,26 @@ Generator details: `src/generator/README.md`.
   trimming before December (with Mario).
 - **Weekly close** (spec §5) isn't built. It should reuse `cut.ts` / `calendar.ts` with past and current weeks locked.
 
-## Next: phase 2 — Plan and Ruta del día screens (Contry first)
+## Found in phase 2 (for later)
+- **Cold room halves are bigger than a day.** Contry's Cuarto frío Q is ~309 SKUs (269 with stock) and sits alone on
+  aux_inv's Tuesday (capacity 175/day), so every Tuesday shows over. The weekly total fits; only the day is heavy. Options:
+  raise aux_inv's Tuesday, or let the generator balance the tier-0 route across days by load. Halves stay as they are.
+- **Mid-week generation:** the cycle starts on the current Monday, so a draft made on Wednesday has Mon–Tue already past.
+  The "sin identificar" block lands on week 1's first day (Tue Nov 10 for Contry), which is already gone. Consider
+  starting a draft made after Monday on the next Monday, or placing the extra block on the first day still to come.
+- **123 frozen SKUs without a freezer** in Contry (note on aux_inv's freezer day). Probably aisle Z; see the open item.
+- **Exceptions:** Contry has 784 (579 solo pasillo, 123 congelado sin congelador, 76 sin posición, 4 código sin regla,
+  2 no están en Masterview). The panel lists them; nothing is written to `ic_exceptions` yet (weekly close).
+- **Leads are 1–25 SKUs over** for the cycle (961/960, 985/960). Shown on the role bars; no banner because the cycle
+  as a whole fits.
+- The date picker shows the browser's date format (e.g. 11/11/2026 on an English phone).
+
+## Next: phase 3 — Seguimiento and the weekly close (suggested)
+- Seguimiento per location: done / late / pending / done by another role, from `ic_conf_events` vs the active plan.
+- Weekly close (spec 5.2): revisits, new/removed locations, layer 4 refresh, past and current weeks locked.
+- Configuración hub (roles, capacities, rules with live preview, walking order).
+
+## Phase 2 brief (done; kept for reference)
 Prompt Jose will run in a new task:
 
 - **Loading inputs:** config, roles and location rules; sorting, Masterview and tiers. Stock estimates need a new
