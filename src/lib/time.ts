@@ -95,3 +95,8 @@ export function isoWeekday(ymd: string): number {
 export function globalWeek(anchorMonday: string, ymd: string): number {
   return Math.floor(daysBetween(anchorMonday, ymd) / 7) + 1;
 }
+
+/** Monday of the week a 'YYYY-MM-DD' falls in (the date itself when it is a Monday). */
+export function mondayOf(ymd: string): string {
+  return addDays(ymd, 1 - isoWeekday(ymd));
+}

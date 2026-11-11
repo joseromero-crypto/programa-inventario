@@ -1,15 +1,27 @@
-// ic-admin: coordinator writes (config edits, plan actions). Phase 0 stub: only verifies the PIN.
+// ic-admin: coordinator writes, behind the admin PIN. Thin wrapper: validation and error messages
+// live in ../_shared/plan_admin.ts (Vitest-tested); each write is one SQL transaction (migration 0008).
 //
-//   POST { action: 'ping' }   header `x-admin-pin` = IC_ADMIN_PIN secret   → { ok: true }
+//   POST, header `x-admin-pin` = IC_ADMIN_PIN secret
+//     { action: 'ping' }                                          → { ok: true }
+//     { action: 'save_draft', plan: DraftPayload }                → { plan_id, cycle_no, slots, units, replaced_drafts }
+//     { action: 'move', plan_id, slot_unit_id, day, role }        → { ok, unit_key, slot_id }   (drafts only)
+//     { action: 'activate', plan_id }                             → { ok, plan_id, previous_plan }
 //
 // Called from the browser, so it answers CORS preflight. verify_jwt = false (anon app, PIN auth).
+import { createClient } from 'npm:@supabase/supabase-js@2';
 import { json, secretMatches } from '../_shared/auth.ts';
+import { parseAdminRequest, rpcCall, sqlError } from '../_shared/plan_admin.ts';
 
 const CORS = {
   'access-control-allow-origin': '*',
   'access-control-allow-methods': 'POST, OPTIONS',
   'access-control-allow-headers': 'content-type, x-admin-pin, authorization, apikey, x-client-info',
 };
+const ACTOR = 'coordinador (PIN)';
+
+const db = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, {
+  auth: { persistSession: false },
+});
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
@@ -17,12 +29,22 @@ Deno.serve(async (req) => {
   if (!(await secretMatches(req.headers.get('x-admin-pin'), Deno.env.get('IC_ADMIN_PIN')))) {
     return json({ error: 'PIN incorrecto' }, 401, CORS);
   }
-  let body: { action?: unknown };
+  let body: unknown;
   try {
     body = await req.json();
   } catch {
     return json({ error: 'invalid JSON' }, 400, CORS);
   }
-  if (body.action === 'ping') return json({ ok: true }, 200, CORS);
-  return json({ error: 'unknown action' }, 400, CORS);
+  const parsed = parseAdminRequest(body);
+  if (!parsed.ok) return json({ error: parsed.error }, 400, CORS);
+
+  const call = rpcCall(parsed.value, ACTOR);
+  if (!call) return json({ ok: true }, 200, CORS);
+  const { data, error } = await db.rpc(call.fn, call.args);
+  if (error) {
+    console.error(call.fn, error.message);
+    const e = sqlError(error.message);
+    return json({ error: e.error }, e.status, CORS);
+  }
+  return json(data, 200, CORS);
 });
