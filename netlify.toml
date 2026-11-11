@@ -1,0 +1,22 @@
+# Netlify: builds from main on every push.
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+# Public values only. The publishable key ships in the browser bundle by design;
+# access is enforced by RLS. Real secrets (INGEST_SECRET, IC_ADMIN_PIN) live in Supabase, never here.
+[build.environment]
+  NODE_VERSION = "24"
+  VITE_SUPABASE_URL = "https://uuqqtksxlgkztenojufm.supabase.co"
+  VITE_SUPABASE_PUBLISHABLE_KEY = "sb_publishable_K4fOYscdl3I0zBcBEAV6kA_dDzZDQX7"
+
+# Hashed build assets never change; index.html must always revalidate.
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/index.html"
+  [headers.values]
+    Cache-Control = "no-cache"

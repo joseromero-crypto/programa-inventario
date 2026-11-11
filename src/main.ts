@@ -6,4 +6,4 @@ const root = document.querySelector<HTMLDivElement>('#app');
 if (!root) throw new Error('#app not found');
 
 // No remembered state: every load starts at the hub picker.
-renderHubPicker(root);
+void renderHubPicker(root);
