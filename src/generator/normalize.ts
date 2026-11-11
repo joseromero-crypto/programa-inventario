@@ -1,5 +1,6 @@
 // Sorting rows → plannable locations (units) + exceptions (spec 4.1, hub-rules 2.4). Pure.
 import { compileRules, matchCode, normalizeCode, type LocationRule } from '../lib/locationRules';
+import { buildMatcher, normalizeName, type MatchedBy } from './match';
 import { unitComparator } from './order';
 import type { PlanException, Product, SizingBasis, Sku, SortingRow, TierLookup, Unit, UnitKind } from './types';
 
@@ -18,6 +19,8 @@ export interface Normalized {
   exceptions: PlanException[];
   positiveRatio: number;
   dropped: { fyv: number; ignored: number };
+  /** How sorting rows (FyV excluded) were matched to Masterview. */
+  matching: Record<MatchedBy | 'none', number>;
 }
 
 export const isFrozen = (temp: string) => Number(String(temp).trim()) < 0;
@@ -40,10 +43,10 @@ interface Draft {
   aisle: string;
   estante: string;
   skus: Sku[];
-  barcodes: Set<string>;
+  ids: Set<string>;
 }
 
-export function finishUnit(d: Omit<Draft, 'barcodes'>, basis: SizingBasis, loose: { count: number; positive: number } = { count: 0, positive: 0 }): Unit {
+export function finishUnit(d: Omit<Draft, 'ids'>, basis: SizingBasis, loose: { count: number; positive: number } = { count: 0, positive: 0 }): Unit {
   const count = d.skus.length;
   const positiveEst = d.skus.reduce((s, k) => s + k.positive, 0) + loose.positive;
   const carnes = d.skus.filter((k) => k.category === 'carnes').length;
@@ -63,13 +66,20 @@ export function finishUnit(d: Omit<Draft, 'barcodes'>, basis: SizingBasis, loose
 
 export function normalize(input: NormalizeInput): Normalized {
   const { compiled } = compileRules(input.rules);
-  const byBarcode = new Map<string, Product>();
-  for (const p of input.products) if (p.barcode && !byBarcode.has(p.barcode.trim())) byBarcode.set(p.barcode.trim(), p);
+  const match = buildMatcher(input.products);
 
   const rows = input.sorting
-    .map((r) => ({ r, barcode: String(r.barcode ?? '').trim(), product: byBarcode.get(String(r.barcode ?? '').trim()) }))
-    .filter((x) => x.barcode !== '');
+    .map((r) => {
+      const m = match(r);
+      const barcode = String(r.barcode ?? '').trim();
+      // Identity in the plan: the Calii SKU; an unmatched row is known by its name (or barcode).
+      const id = m.product?.sku ?? `?${normalizeName(r.name) || barcode}`;
+      return { r, barcode, id, product: m.product as Product | null, by: m.by };
+    })
+    .filter((x) => x.id !== '?');
   const kept = rows.filter((x) => x.product?.category !== 'fyv');
+  const matching: Normalized['matching'] = { sku: 0, name: 0, barcode: 0, none: 0 };
+  for (const x of kept) matching[x.by ?? 'none']++;
   const ratio = positiveRatio(kept.map((x) => x.product?.sku ?? null), input.stock);
 
   const drafts = new Map<string, Draft>();
@@ -84,6 +94,7 @@ export function normalize(input: NormalizeInput): Normalized {
       barcode: x.barcode,
       sku,
       name: String(x.r.name ?? '').trim(),
+      matchedBy: x.by,
       unit: x.product?.unit ?? null,
       category: x.product?.category ?? null,
       tier: sku !== null ? input.tiers(sku) : { tier0: false, sales: null, rank: null },
@@ -96,9 +107,9 @@ export function normalize(input: NormalizeInput): Normalized {
   const loose = new Map<string, { x: (typeof kept)[number]; rawPos: string }[]>();
   const place = (x: (typeof kept)[number], key: string, kind: UnitKind, aisle: string, estante: string) => {
     let d = drafts.get(key);
-    if (!d) drafts.set(key, (d = { key, kind, aisle, estante, skus: [], barcodes: new Set() }));
-    if (d.barcodes.has(x.barcode)) return; // same SKU listed twice on one location
-    d.barcodes.add(x.barcode);
+    if (!d) drafts.set(key, (d = { key, kind, aisle, estante, skus: [], ids: new Set() }));
+    if (d.ids.has(x.id)) return; // same SKU listed twice on one location
+    d.ids.add(x.id);
     d.skus.push(toSku(x));
   };
 
@@ -140,16 +151,16 @@ export function normalize(input: NormalizeInput): Normalized {
       place(x, key, 'shelf', m.unit_key, estante);
     }
     if (!x.product) exc('NOT_IN_MV', x, rawPos, key);
-    if (seen.has(x.barcode)) exc('DUP_POSITION', x, rawPos, key);
-    seen.add(x.barcode);
+    if (seen.has(x.id)) exc('DUP_POSITION', x, rawPos, key);
+    seen.add(x.id);
   }
 
   // Sin-estante SKUs: spread over the aisle's shelves, by how many SKUs each shelf holds. A SKU that
   // also has a full position is already planned there. An aisle with no shelves keeps one stop.
-  const placed = new Set([...drafts.values()].flatMap((d) => [...d.barcodes]));
+  const placed = new Set([...drafts.values()].flatMap((d) => [...d.ids]));
   const share = new Map<string, { count: number; positive: number }>();
   for (const [aisle, rows] of [...loose].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))) {
-    const fresh = rows.filter((r, i) => !placed.has(r.x.barcode) && rows.findIndex((q) => q.x.barcode === r.x.barcode) === i);
+    const fresh = rows.filter((r, i) => !placed.has(r.x.id) && rows.findIndex((q) => q.x.id === r.x.id) === i);
     if (fresh.length === 0) continue;
     const shelves = [...drafts.values()].filter((d) => d.kind === 'shelf' && d.aisle === aisle);
     if (shelves.length === 0) {
@@ -168,5 +179,5 @@ export function normalize(input: NormalizeInput): Normalized {
 
   const units = [...drafts.values()].map((d) => finishUnit(d, input.sizingBasis, share.get(d.key))).sort(unitComparator(input.walkingOrder));
   exceptions.sort((a, b) => (a.code < b.code ? -1 : a.code > b.code ? 1 : 0) || (a.rawPos < b.rawPos ? -1 : a.rawPos > b.rawPos ? 1 : 0) || (a.barcode < b.barcode ? -1 : a.barcode > b.barcode ? 1 : 0));
-  return { units, exceptions, positiveRatio: ratio, dropped: { fyv: rows.length - kept.length, ignored } };
+  return { units, exceptions, positiveRatio: ratio, dropped: { fyv: rows.length - kept.length, ignored }, matching };
 }

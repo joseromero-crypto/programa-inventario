@@ -25,7 +25,9 @@ An app that **generates and keeps alive** each micro hub's 4-week confirmation p
 ```
 { hub, updatedAt, sourceFile, count, quality, items: [[name, barcode, pasillo, estante, nivel, col6, temp], ...] }
 ```
-- The file has no SKU code. SKU, `main_category` and `calii_unit` (kg/pz) come from a barcode join to `mv_products`.
+- The file has no SKU code. Each row is matched to `mv_products` by SKU (if a row ever carries one), then by product name,
+  then by barcode as a last resort (barcodes can be wrong, change, be missing or be reused; leading zeros are ignored).
+  The Calii SKU is the identity from there on. See `src/generator/match.ts`.
 - The app polls `version.txt` (cheap) and re-reads `latest.json` when it changes.
 
 | Hub | Updated | Rows | Full pos. | Aisle only | No pos. | Aisle codes | Shelves | Freezers | Frozen w/o B## |

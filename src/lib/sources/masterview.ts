@@ -1,11 +1,12 @@
 // Masterview for this app, via security-definer RPCs (mv_products / mv_product_city are login-only).
-//   ic_mv_products()      → [sku, barcode, main_category, calii_unit, temp, assembly_category]
+//   ic_mv_products()      → [sku, barcode, main_category, calii_unit, temp, assembly_category, name]
 //   ic_mv_tiers(city)     → [sku, tiers] for one city (joined on lower(city))
 import { supabase } from '../supabase';
 import type { Category, CityTierRow } from '../../generator/types';
 
 export interface MvProduct {
   sku: string;
+  name: string | null; // sorting rows are matched on it before the barcode
   barcode: string | null;
   main_category: string | null; // web taxonomy, not the assembly category
   calii_unit: string | null; // 'kg' | 'pz'
@@ -25,8 +26,8 @@ export function assemblyCategory(raw: string | null | undefined): Category {
 export async function fetchMasterview(): Promise<MvProduct[]> {
   const { data, error } = await supabase.rpc('ic_mv_products');
   if (error) throw new Error(error.message);
-  return (data as [string, string | null, string | null, string | null, string | null, string | null][]).map(
-    ([sku, barcode, main_category, calii_unit, temp, assembly]) => ({ sku, barcode, main_category, calii_unit, temp, category: assemblyCategory(assembly) }),
+  return (data as [string, string | null, string | null, string | null, string | null, string | null, string | null][]).map(
+    ([sku, barcode, main_category, calii_unit, temp, assembly, name]) => ({ sku, name: name ?? null, barcode, main_category, calii_unit, temp, category: assemblyCategory(assembly) }),
   );
 }
 

@@ -19,6 +19,7 @@ tagged by layer, notes), exceptions, and the load report (with Spanish messages 
 |---|---|
 | `types.ts` | Input / output types |
 | `tiers.ts` | Parses the Tiers cell; `tierSource(hub, rows)` is the only way the plan reads tiers |
+| `match.ts` | Sorting row → Masterview product: SKU, then name, then barcode |
 | `normalize.ts` | Sorting rows → locations + exceptions; FyV dropped |
 | `order.ts` | Walking order (Spanish alphabet by default), estante order, aisle jumps |
 | `cut.ts` | Contiguous cutting by load targets; used for sections, weeks and days |
@@ -32,13 +33,20 @@ tagged by layer, notes), exceptions, and the load report (with Spanish messages 
 
 ## Decisions taken while building
 
+- **Matching to Masterview.** The Calii SKU (3 letters + 3 digits) is the identity in the plan. The sorting file has no
+  SKU, so a row is matched by SKU if it ever has one, then by exact name (ignoring case, accents and spaces), and
+  only then by barcode (leading zeros ignored). Barcodes can be wrong, change, be missing, and Calii reuses some
+  (one barcode on a cookie and a gelato). Contry, 2026-11-11: 4,491 rows by name, 23 only by barcode, 5 not found
+  (was 155 not found by barcode). The report counts each and names the barcode-only ones as a name mismatch.
+
 - **Locations.** A shelf is `aisle-estante` (`G-10`). Freezers and cold rooms are whole units; the cold room stays
   as the halves the location rules give (Contry: Q and W), never split further. Codes without a rule become
   `Sin identificar: <code>`.
 - **Sin estante.** A SKU with an aisle but no estante has no spot in Retool but sits on some shelf of that aisle, so it
   gets confirmed when the aisle's shelves are visited. It adds load (`looseCount`, spread over the aisle's shelves by
   their SKU count) but no stop of its own. Only an aisle with no shelves at all keeps one `G (sin estante)` stop.
-- **Category** (FyV / Carnes / Abarrotes) comes from Masterview's Assembly Category (`ic_mv_products`, 6th field).
+- **Category** (FyV / Carnes / Abarrotes) comes from Masterview's Assembly Category (`ic_mv_products`, 6th field;
+  the name is the 7th, migration 0007).
 - **Frozen SKUs** (temp below 0) that aren't in a freezer are `FROZEN_NO_FREEZER`, owned by aux_inv, noted on the
   first freezer day of week 1. They don't count as shelf load.
 - **Stock basis.** `positive` sizing: a SKU counts 1 with stock, 0 without, and the hub's ratio when unknown.

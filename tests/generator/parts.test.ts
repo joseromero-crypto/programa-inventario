@@ -1,13 +1,13 @@
 // Unit tests for the generator's building blocks.
 import { describe, expect, it } from 'vitest';
 import { addDays, globalWeek, isoWeekday } from '../../src/lib/time';
-import { compareTiers, countedTier, cutInto, cutSequence, parseTiers, tierSource, aisleComparator, aisleJumps, normalize } from '../../src/generator';
+import { compareTiers, countedTier, cutInto, cutSequence, parseTiers, tierSource, aisleComparator, aisleJumps, normalize, buildMatcher } from '../../src/generator';
 import { compareEstante } from '../../src/generator/order';
 import { splitFreezers } from '../../src/generator/layers/freezers';
 import { buildTier0Route } from '../../src/generator/layers/tier0';
 import { coveragePhrase, selectHighRotation } from '../../src/generator/layers/highRotation';
 import { finishUnit } from '../../src/generator/normalize';
-import type { Sku, Unit } from '../../src/generator';
+import type { Product, Sku, Unit } from '../../src/generator';
 import { CONTRY_RULES, contryInput, rule } from './helpers';
 
 describe('time helpers', () => {
@@ -83,6 +83,47 @@ describe('contiguous cuts', () => {
   });
 });
 
+describe('matching sorting rows to Masterview (SKU, then name, then barcode)', () => {
+  const mv: Product[] = [
+    { sku: 'UWA015', name: 'Demi baguette finas hierbas Nūbe 130g', barcode: '0767203600993', unit: 'pz', category: 'abarrotes' },
+    { sku: 'TLC503', name: 'Salsa picante Valentina 370ml', barcode: '097339000054', unit: 'pz', category: 'abarrotes' },
+    { sku: 'QEK139', name: 'Salsa picante etiqueta negra Valentina 370ml', barcode: '97339000061', unit: 'pz', category: 'abarrotes' },
+    { sku: 'AAA001', name: 'Mismo nombre 1L', barcode: '111', unit: 'pz', category: 'abarrotes' },
+    { sku: 'AAA002', name: 'Mismo nombre 1L', barcode: '222', unit: 'pz', category: 'abarrotes' },
+    { sku: 'NOB001', name: 'Sin código', barcode: null, unit: 'kg', category: 'carnes' },
+  ];
+  const match = buildMatcher(mv);
+  it('uses the name even when the barcode is wrong or missing', () => {
+    expect(match({ name: 'Demi baguette finas hierbas Nūbe 130g', barcode: '767203600993' })).toEqual({ product: mv[0], by: 'name' });
+    expect(match({ name: 'Salsa picante Valentina 370ml', barcode: '97339000061' }).product?.sku).toBe('TLC503'); // barcode points elsewhere
+    expect(match({ name: 'Sin código', barcode: '' })).toMatchObject({ by: 'name', product: { sku: 'NOB001' } });
+  });
+  it('ignores case, accents and extra spaces in the name', () => {
+    expect(match({ name: '  demi  BAGUETTE finas hierbas Nube 130g ', barcode: '' }).product?.sku).toBe('UWA015');
+  });
+  it('takes the SKU first when the row has one', () => {
+    expect(match({ sku: 'qek139', name: 'Salsa picante Valentina 370ml', barcode: '' })).toMatchObject({ by: 'sku', product: { sku: 'QEK139' } });
+  });
+  it('settles a shared name by barcode, else falls back to the barcode alone', () => {
+    expect(match({ name: 'Mismo nombre 1L', barcode: '222' })).toMatchObject({ by: 'name', product: { sku: 'AAA002' } });
+    expect(match({ name: 'Mismo nombre 1L', barcode: '999' })).toEqual({ product: null, by: null });
+    expect(match({ name: 'Nombre distinto', barcode: '0111' })).toMatchObject({ by: 'barcode', product: { sku: 'AAA001' } }); // leading zero ignored
+  });
+  it('one product listed twice with different barcodes is one SKU, not two', () => {
+    const n = normalize({
+      rules: CONTRY_RULES,
+      sorting: [
+        { name: 'Salsa picante Valentina 370ml', barcode: '097339000054', pasillo: 'D', estante: '3', nivel: '', temp: 'Ambiente' },
+        { name: 'Salsa picante Valentina 370ml', barcode: '7500000000000', pasillo: 'D', estante: '3', nivel: '', temp: 'Ambiente' },
+        { name: 'No existe', barcode: '555', pasillo: 'D', estante: '3', nivel: '', temp: 'Ambiente' },
+      ],
+      products: mv, tiers: () => ({ tier0: false, sales: null, rank: null }), stock: {}, sizingBasis: 'catalog', walkingOrder: [],
+    });
+    expect(n.units[0]!.skus.map((s) => [s.sku, s.matchedBy])).toEqual([['TLC503', 'name'], [null, null]]);
+    expect(n.matching).toEqual({ sku: 0, name: 2, barcode: 0, none: 1 });
+  });
+});
+
 describe('normalize (spec 4.1, hub-rules 2.4)', () => {
   const sorting = [
     { name: 'a', barcode: '1', pasillo: 'D', estante: '3', nivel: '', temp: 'Ambiente' },
@@ -140,7 +181,7 @@ describe('normalize (spec 4.1, hub-rules 2.4)', () => {
   });
 });
 
-const sku = (o: Partial<Sku>): Sku => ({ barcode: 'x', sku: 'x', name: '', unit: 'pz', category: 'abarrotes', tier: { tier0: false, sales: null, rank: null }, positive: 1, ...o });
+const sku = (o: Partial<Sku>): Sku => ({ barcode: 'x', sku: 'x', name: '', matchedBy: 'name', unit: 'pz', category: 'abarrotes', tier: { tier0: false, sales: null, rank: null }, positive: 1, ...o });
 const unitOf = (key: string, skus: Sku[], kind: Unit['kind'] = 'shelf'): Unit =>
   finishUnit({ key, kind, aisle: key.split('-')[0]!, estante: key.split('-')[1] ?? '', skus }, 'positive');
 const t = (sales: string, tier0 = false) => ({ tier0, sales, rank: Number(sales) });

@@ -1,4 +1,4 @@
-// Runs every migration on PGlite (in-memory Postgres) and checks 0006 (plan storage).
+// Runs every migration on PGlite (in-memory Postgres) and checks 0006 (plan storage) and 0007.
 // Shared tables (mv_*) and Supabase roles are stubbed: only their shape matters here.
 import { PGlite } from '@electric-sql/pglite';
 import { beforeAll, describe, expect, it } from 'vitest';
@@ -20,10 +20,10 @@ beforeAll(async () => {
   await db.exec(STUBS);
   for (const name of Object.keys(files).sort()) await db.exec(files[name]!);
   await db.exec(`
-    insert into public.mv_products (sku, barcode, calii_unit, main_category, temp, raw) values
-      ('AAA111', '750001', 'pz', 'Despensa', 'Ambiente', '{"Assembly Category (options are: frutas y verduras, carnes, abarrotes)": "Abarrotes"}'),
-      ('BBB222', null, 'kg', 'Frutas', '8', '{"Assembly Category (options are: frutas y verduras, carnes, abarrotes)": "Frutas y verduras"}'),
-      ('CCC333', '750003', 'pz', 'Viejo', 'Ambiente', '{"retired_at": "2026-01-01"}');
+    insert into public.mv_products (sku, name, barcode, calii_unit, main_category, temp, raw) values
+      ('AAA111', 'Aceite de oliva 500ml', '750001', 'pz', 'Despensa', 'Ambiente', '{"Assembly Category (options are: frutas y verduras, carnes, abarrotes)": "Abarrotes"}'),
+      ('BBB222', 'Manzana roja', null, 'kg', 'Frutas', '8', '{"Assembly Category (options are: frutas y verduras, carnes, abarrotes)": "Frutas y verduras"}'),
+      ('CCC333', 'Viejo producto', '750003', 'pz', 'Viejo', 'Ambiente', '{"retired_at": "2026-01-01"}');
     insert into public.mv_product_city (sku, city, tiers) values ('AAA111', 'Monterrey', '1; 0'), ('AAA111', 'Saltillo', '4'), ('BBB222', 'CDMX', '2');
   `);
 }, 60_000);
@@ -36,9 +36,9 @@ async function newPlan(cycleWeeks = 6) {
   return { id, role_id };
 }
 
-describe('migrations 0001–0006 on PGlite', () => {
+describe('migrations 0001–0007 on PGlite', () => {
   it('apply cleanly in order', () => {
-    expect(Object.keys(files).map((f) => f.split('/').pop())).toContain('0006_ic_plan_storage.sql');
+    expect(Object.keys(files).map((f) => f.split('/').pop())).toEqual(expect.arrayContaining(['0006_ic_plan_storage.sql', '0007_ic_mv_products_name.sql']));
   });
 
   it('store a plan longer than 4 weeks, with fractional day capacity and the extra block', async () => {
@@ -72,11 +72,11 @@ describe('migrations 0001–0006 on PGlite', () => {
     await db.query(`insert into public.ic_unit_week_state (plan_id, week, unit_key) values ($1, 7, 'G-10')`, [id]);
   });
 
-  it('ic_mv_products adds the Masterview assembly category and skips retired products', async () => {
+  it('ic_mv_products adds the assembly category and the name, and skips retired products', async () => {
     const { r } = await one<{ r: unknown[][] }>(`select public.ic_mv_products() r`);
     expect(r).toEqual([
-      ['AAA111', '750001', 'Despensa', 'pz', 'Ambiente', 'Abarrotes'],
-      ['BBB222', null, 'Frutas', 'kg', '8', 'Frutas y verduras'],
+      ['AAA111', '750001', 'Despensa', 'pz', 'Ambiente', 'Abarrotes', 'Aceite de oliva 500ml'],
+      ['BBB222', null, 'Frutas', 'kg', '8', 'Frutas y verduras', 'Manzana roja'],
     ]);
   });
 

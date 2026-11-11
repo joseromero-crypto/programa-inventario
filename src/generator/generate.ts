@@ -83,7 +83,7 @@ export function generate(input: GeneratorInput): Plan {
   if (extra) slots.push(extra);
   slots.sort((a, b) => (a.day < b.day ? -1 : a.day > b.day ? 1 : 0) || roleKeys.indexOf(a.role) - roleKeys.indexOf(b.role) || Number(a.extra) - Number(b.extra));
 
-  const report = buildReport({ hub, roles, slots, units, exceptions: norm.exceptions, route, freezers, high, spare, candidates, sections, ownerWeekly });
+  const report = buildReport({ hub, roles, slots, units, exceptions: norm.exceptions, matching: norm.matching, route, freezers, high, spare, candidates, sections, ownerWeekly });
 
   return {
     generatorVersion: GENERATOR_VERSION,

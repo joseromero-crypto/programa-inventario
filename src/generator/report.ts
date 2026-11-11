@@ -16,6 +16,7 @@ export interface ReportInput {
   slots: Slot[];
   units: Unit[];
   exceptions: PlanException[];
+  matching: LoadReport['matching'];
   route: Tier0Route;
   freezers: FreezerSplit;
   high: HighRotation;
@@ -76,6 +77,9 @@ export function buildReport(x: ReportInput): LoadReport {
   if (!x.high.coverage.some((c: TierCoverage) => c.total > 0 && c.coveredWeekly >= c.total) && over === 0)
     messages.push('Casi no hay capacidad para tiers semanales. Opciones: subir la capacidad de los líderes (240 → 300) o tier 1 cada 2 semanas.');
   if (unidentified.length) messages.push(`Ubicaciones sin identificar: ${fmt(sum(unidentified.map((u) => u.count)))} SKUs en ${unidentified.length} códigos (bloque extra del aux. de inventarios).`);
+  if (x.matching.barcode > 0)
+    messages.push(`${fmt(x.matching.barcode)} productos se encontraron solo por código de barras: su nombre en el sorting no coincide con Masterview.`);
+  if (x.matching.none > 0) messages.push(`${fmt(x.matching.none)} productos del sorting no están en Masterview (ni por nombre ni por código de barras).`);
   if (fix) messages.push(fix);
   for (const r of roles) {
     if (r.over > 0.05 * r.cycleCapacity) messages.push(`${r.label} queda ${fmt(r.over)} SKUs arriba de su capacidad del ciclo (${fmt(r.assigned)} de ${fmt(r.cycleCapacity)}).`);
@@ -93,6 +97,7 @@ export function buildReport(x: ReportInput): LoadReport {
     weekly: { leftoverBeforeTiers: leftoverWeekly, tierCoverage: x.high.coverage, usefulSkus: x.high.usefulSkus, totalSkus: x.high.totalSkus },
     unidentified: { codes: unidentified.length, skus: sum(unidentified.map((u) => u.count)) },
     exceptions,
+    matching: x.matching,
     aisleJumps: aisleJumpsList,
     overload: { over, fix },
     shorterCycle,

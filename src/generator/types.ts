@@ -35,6 +35,8 @@ export interface Role {
 export interface SortingRow {
   name: string;
   barcode: string;
+  /** Calii SKU, if the export ever carries it (it doesn't today). Matched first. */
+  sku?: string;
   pasillo: string;
   estante: string;
   nivel: string;
@@ -43,7 +45,9 @@ export interface SortingRow {
 
 export interface Product {
   sku: string;
-  barcode: string;
+  /** Masterview product name; sorting rows are matched on it before the barcode. */
+  name?: string | null;
+  barcode: string | null;
   unit: 'kg' | 'pz' | null;
   category: Category;
 }
@@ -85,9 +89,11 @@ export type TierLookup = (sku: string) => TierInfo;
 export type UnitKind = 'shelf' | 'aisle_only' | 'freezer' | 'cold_room' | 'unidentified';
 
 export interface Sku {
-  barcode: string;
+  barcode: string; // as written in the sorting file
   sku: string | null; // null = not in Masterview
   name: string;
+  /** How the row was matched to Masterview (sku, then name, then barcode). */
+  matchedBy: 'sku' | 'name' | 'barcode' | null;
   unit: 'kg' | 'pz' | null;
   category: Category;
   tier: TierInfo;
@@ -184,6 +190,8 @@ export interface LoadReport {
   weekly: { leftoverBeforeTiers: number; tierCoverage: TierCoverage[]; usefulSkus: number; totalSkus: number };
   unidentified: { codes: number; skus: number };
   exceptions: Record<ExceptionCode, number>;
+  /** Sorting rows matched to Masterview by SKU, by name, only by barcode, or not at all (FyV excluded). */
+  matching: { sku: number; name: number; barcode: number; none: number };
   aisleJumps: { role: RoleKey; day: string; jumps: number }[];
   overload: { over: number; fix: string | null };
   shorterCycle: number | null; // weeks the whole cycle would fit in, when less than cycleWeeks
