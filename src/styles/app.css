@@ -1,1 +1,3 @@
 /* App-specific rules on top of calii-theme.css. Use --c-* tokens only. */
+.c-list-row.is-disabled{cursor:default;color:var(--c-muted)}
+.c-list-row.is-disabled:hover{background:var(--c-surface)}

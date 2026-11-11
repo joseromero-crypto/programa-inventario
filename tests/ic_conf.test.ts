@@ -8,7 +8,8 @@ const HUBS: HubCfg[] = [
   ['mh-contry', 'con', 'Contry'], ['mh-condesa', 'csa', 'Condesa'], ['mh-zapopan', 'zap', 'Zapopan'],
   ['mh-cumbres', 'cu', 'Cumbres'], ['mh-san-nicolas', 'sn', 'San Nicolás'],
   ['mh-guadalupe', 'gpe', 'Guadalupe'], ['mh-avicola', 'avi', 'Avícola'],
-].map(([hub_slug, login_id, display_name]) => ({ hub_slug: hub_slug!, login_id: login_id!, display_name: display_name!, turno_split: '14:00:00', sheet_aliases: [] }));
+].map(([hub_slug, login_id, name]) => ({ hub_slug: hub_slug!, login_id: login_id!, display_name: 'MH ' + name!, turno_split: '14:00:00', sheet_aliases: [] }));
+const HUBS_WITH_CH: HubCfg[] = [...HUBS, { hub_slug: 'ch-guadalupe', login_id: '', display_name: 'CH Guadalupe', turno_split: '14:00:00', sheet_aliases: [] }];
 
 // mirrors 0002_ic_seed.sql for the hubs used below
 const LOGINS: LoginCfg[] = [
@@ -54,6 +55,12 @@ describe('hub resolver', () => {
     expect(r('San Nicolas')).toBe('mh-san-nicolas');
     expect(r('MH San Nicolás')).toBe('mh-san-nicolas');
     expect(r('ch-guadalupe')).toBeNull();
+  });
+  it('keeps CH Guadalupe and MH Guadalupe apart', () => {
+    const rc = buildHubResolver(HUBS_WITH_CH);
+    expect(rc('CH Guadalupe')).toBe('ch-guadalupe');
+    expect(rc('MH Guadalupe')).toBe('mh-guadalupe');
+    expect(rc('Guadalupe')).toBe('mh-guadalupe');
   });
 });
 

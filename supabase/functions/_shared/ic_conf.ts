@@ -10,7 +10,7 @@ export type Assign = Exclude<RoleKey, 'extra'> | 'by_turno' | 'by_category';
 
 export interface HubCfg {
   hub_slug: string;
-  login_id: string;
+  login_id: string | null;
   display_name: string;
   turno_split: string; // 'HH:MM' or 'HH:MM:SS'
   sheet_aliases: string[];
