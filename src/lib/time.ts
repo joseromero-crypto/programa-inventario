@@ -42,6 +42,16 @@ export function daysBetween(a: string, b: string): number {
   return Math.round((anchor(b).getTime() - anchor(a).getTime()) / 86_400_000);
 }
 
+/** Mon–Fri days after a, up to and including b ('YYYY-MM-DD'). Weekends never count. */
+export function workdaysBetween(a: string, b: string): number {
+  let n = 0;
+  for (let i = 1, total = daysBetween(a, b); i <= total; i++) {
+    const dow = new Date(anchor(a).getTime() + i * 86_400_000).getUTCDay(); // 0 = Sun, 6 = Sat
+    if (dow !== 0 && dow !== 6) n++;
+  }
+  return n;
+}
+
 /** Calendar days between an instant and "now", both in Monterrey. */
 export function ageInDays(d: Date, ref: Date = now()): number {
   return daysBetween(localDate(d), localDate(ref));

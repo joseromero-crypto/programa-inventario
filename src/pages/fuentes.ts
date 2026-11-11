@@ -3,12 +3,12 @@ import { supabase } from '../lib/supabase';
 import { compileRules, unmatchedCodes, type LocationRule } from '../lib/locationRules';
 import { fetchFreshness, type Freshness, type HubFreshness } from '../lib/sources/freshness';
 import { fetchSorting, fetchSortingVersion, summarizeSorting } from '../lib/sources/sorting';
-import { ageInDays, formatDateTime, formatDay, formatShortDay, relativeDays } from '../lib/time';
+import { ageInDays, formatDateTime, formatDay, formatShortDay, localDate, now, relativeDays, workdaysBetween } from '../lib/time';
 import type { HubRef } from '../router';
 import { errorBox, esc, fmtInt, fmtPct, header } from '../ui';
 
 const SORTING_STALE_DAYS = 21;
-const CONF_STALE_DAYS = 2;
+const CONF_STALE_WORKDAYS = 2; // Mon–Fri only
 const SHEET_COLUMNS = 55;
 const SHEET_CELL_LIMIT = 10_000_000;
 const CODES_VISIBLE = 12;
@@ -116,7 +116,9 @@ function sharedCard(f: Freshness): string {
 
 function hubCard(h: HubFreshness): string {
   const last = age(h.last_event_ts);
-  const confStale = last.days === null || last.days > CONF_STALE_DAYS;
+  // Workdays only (Mon–Fri): a Friday confirmation is still fresh on Monday.
+  const confStale = h.last_event_ts === null
+    || workdaysBetween(localDate(new Date(h.last_event_ts)), localDate(now())) > CONF_STALE_WORKDAYS;
   return `
     <article class="c-card ic-card" data-hub-card="${esc(h.hub_slug)}" data-conf-stale="${confStale}">
       <div class="c-between">
@@ -126,7 +128,7 @@ function hubCard(h: HubFreshness): string {
       <h3 class="ic-subhead">Sorting</h3>
       <div data-sorting="${esc(h.hub_slug)}"><div class="c-skeleton" style="height:120px"></div></div>
       <h3 class="ic-subhead">Confirmaciones</h3>
-      ${kv([['Última', `${last.text}${confStale ? ` ${staleTag(`Más de ${CONF_STALE_DAYS} días`)}` : ''}`]])}
+      ${kv([['Última', `${last.text}${confStale ? ` ${staleTag(`Más de ${CONF_STALE_WORKDAYS} días hábiles`)}` : ''}`]])}
       ${dailyChart(h.daily)}
     </article>`;
 }

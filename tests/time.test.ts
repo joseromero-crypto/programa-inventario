@@ -3,7 +3,7 @@ declare const process: { env: Record<string, string | undefined> };
 process.env.TZ = 'Asia/Singapore';
 
 import { describe, expect, it } from 'vitest';
-import { ageInDays, daysBetween, formatDateTime, formatDay, localDate, localTime, now, relativeDays, setServerNow, TIME_ZONE } from '../src/lib/time';
+import { ageInDays, daysBetween, formatDateTime, formatDay, localDate, localTime, now, relativeDays, setServerNow, TIME_ZONE, workdaysBetween } from '../src/lib/time';
 
 describe('time (device in UTC+8)', () => {
   it('runs with the device zone really set to UTC+8', () => {
@@ -39,5 +39,16 @@ describe('time (device in UTC+8)', () => {
 
   it('describes ages in Spanish', () => {
     expect([0, 1, 5].map(relativeDays)).toEqual(['hoy', 'ayer', 'hace 5 días']);
+  });
+});
+
+describe('workdaysBetween (Mon–Fri only)', () => {
+  // 2026-11-06 Fri, 07 Sat, 08 Sun, 09 Mon, 10 Tue, 11 Wed
+  it('ignores weekends', () => {
+    expect(workdaysBetween('2026-11-06', '2026-11-09')).toBe(1); // Fri → Mon
+    expect(workdaysBetween('2026-11-06', '2026-11-10')).toBe(2); // Fri → Tue: still fresh at limit 2
+    expect(workdaysBetween('2026-11-06', '2026-11-11')).toBe(3); // Fri → Wed: stale
+    expect(workdaysBetween('2026-11-07', '2026-11-08')).toBe(0); // Sat → Sun
+    expect(workdaysBetween('2026-11-10', '2026-11-10')).toBe(0);
   });
 });
