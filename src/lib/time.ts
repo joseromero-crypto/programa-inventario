@@ -79,3 +79,19 @@ export function relativeDays(days: number): string {
   if (days > 1) return `hace ${days} días`;
   return days === -1 ? 'mañana' : `en ${-days} días`;
 }
+
+/** 'YYYY-MM-DD' plus n calendar days (n may be negative). */
+export function addDays(ymd: string, n: number): string {
+  return new Date(anchor(ymd).getTime() + n * 86_400_000).toISOString().slice(0, 10);
+}
+
+/** ISO weekday of a 'YYYY-MM-DD': 1 = Mon .. 7 = Sun. */
+export function isoWeekday(ymd: string): number {
+  const d = anchor(ymd).getUTCDay();
+  return d === 0 ? 7 : d;
+}
+
+/** Global week number of a date, where the week starting on anchorMonday is week 1. */
+export function globalWeek(anchorMonday: string, ymd: string): number {
+  return Math.floor(daysBetween(anchorMonday, ymd) / 7) + 1;
+}
