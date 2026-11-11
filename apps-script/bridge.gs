@@ -1,9 +1,9 @@
 /**
- * Calii Sheet Bridge: generic Google Sheet → Supabase ingest (inventario-conf phase 0.3).
+ * Calii Sheet Bridge: generic Google Sheet -> Supabase ingest (inventario-conf phase 0.3).
  * Source of truth: inventario-conf/apps-script/bridge.gs. Edit there, then paste here.
  *
  * Setup (once):
- *   Project Settings → Script Properties → add INGEST_SECRET (and INGEST_URL only to override the default).
+ *   Project Settings -> Script Properties -> add INGEST_SECRET (and INGEST_URL only to override the default).
  *
  * Functions to run from the editor:
  *   dryRun()              sends the first 100 rows to ?dry=1 and logs counts. Writes nothing.
@@ -23,9 +23,9 @@ const SOURCES = [{
   batch: 2000,
   // Only these columns are sent (the tab has 55). The Edge Function maps them by header name.
   columns: [
-    'Hub', 'sku', 'Código de barras', 'Actualización confirmación', 'Fecha de inventario', 'Turno',
+    'Hub', 'sku', 'C\u00f3digo de barras', 'Actualizaci\u00f3n confirmaci\u00f3n', 'Fecha de inventario', 'Turno',
     'Registrado por', 'Nro. de unidades [MANUAL]', 'Final [AUTO]', 'Inv. disponible app', 'Delta Final',
-    'Delta $', 'Tiers', 'Categoría Final', 'Kg / Pz', 'Posición inventario',
+    'Delta $', 'Tiers', 'Categor\u00eda Final', 'Kg / Pz', 'Posici\u00f3n inventario',
   ],
 }];
 
@@ -33,7 +33,7 @@ const TIME_BUDGET_MS = 4.5 * 60 * 1000;   // Apps Script stops at 6 min
 const CELL_LIMIT = 10000000;
 const CONTINUE_HANDLER = 'backfill';
 
-// ───────────────────────── entry points ─────────────────────────
+// ------------------------- entry points -------------------------
 
 function dryRun() {
   SOURCES.forEach(function (src) {
@@ -42,7 +42,7 @@ function dryRun() {
     const last = Math.min(sheet.getLastRow(), 101);
     if (last < 2) return log_(src.name, 'tab is empty');
     const res = post_(src, cols, sheet, 2, last, sheet.getLastRow(), true);
-    log_(src.name, 'DRY RUN rows 2–' + last + ': ' + JSON.stringify(res, null, 2));
+    log_(src.name, 'DRY RUN rows 2-' + last + ': ' + JSON.stringify(res, null, 2));
   });
 }
 
@@ -90,7 +90,7 @@ function status() {
   });
 }
 
-// ───────────────────────── sync loop ─────────────────────────
+// ------------------------- sync loop -------------------------
 
 /** Returns true when every source is fully synced within this run. */
 function runAll_(opts) {
@@ -145,7 +145,7 @@ function syncSource_(src, started) {
   return true;
 }
 
-// ───────────────────────── sheet + http helpers ─────────────────────────
+// ------------------------- sheet + http helpers -------------------------
 
 function openTab_(src) {
   const sheet = SpreadsheetApp.openById(src.sheetId).getSheetByName(src.tab);
@@ -155,11 +155,12 @@ function openTab_(src) {
 
 /** Header positions of the configured columns (missing ones are left out; the function reports them). */
 function columnPlan_(sheet, src) {
-  const header = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0].map(function (h) { return String(h).trim(); });
+  const raw = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0].map(function (h) { return String(h).trim(); });
+  const header = raw.map(norm_);
   const idx = [], names = [], missing = [];
   src.columns.forEach(function (c) {
-    const i = header.indexOf(c);
-    if (i === -1) missing.push(c); else { idx.push(i); names.push(c); }
+    const i = header.indexOf(norm_(c));
+    if (i === -1) missing.push(c); else { idx.push(i); names.push(raw[i]); }
   });
   if (missing.length) log_(src.name, 'columns not found in the tab header: ' + missing.join(', '));
   return { idx: idx, names: names, width: header.length };
@@ -205,7 +206,7 @@ function fetchJson_(url, options) {
   }
 }
 
-// ───────────────────────── small utilities ─────────────────────────
+// ------------------------- small utilities -------------------------
 
 function props_() { return PropertiesService.getScriptProperties(); }
 function url_() { return props_().getProperty('INGEST_URL') || DEFAULT_INGEST_URL; }
@@ -213,7 +214,7 @@ function resyncKey_(src) { return 'RESYNC_FROM_' + src.name; }
 
 function secret_() {
   const s = props_().getProperty('INGEST_SECRET');
-  if (!s) throw new Error('Missing Script Property INGEST_SECRET (Project Settings → Script Properties).');
+  if (!s) throw new Error('Missing Script Property INGEST_SECRET (Project Settings -> Script Properties).');
   return s;
 }
 
@@ -226,6 +227,11 @@ function deleteTriggers_(handler) {
   ScriptApp.getProjectTriggers().forEach(function (t) {
     if (t.getHandlerFunction() === handler) ScriptApp.deleteTrigger(t);
   });
+}
+
+/** lowercase, no accents, single spaces: header matching survives encoding and spelling drift */
+function norm_(s) {
+  return String(s).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
 }
 
 function log_(scope, msg) { console.log('[' + scope + '] ' + msg); }
