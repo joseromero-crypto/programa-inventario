@@ -143,12 +143,10 @@ Generator details: `src/generator/README.md`.
   - **Dev server:** port 5180, because 5173 is used by another of Jose's apps.
 
 ## To know / open items
-- **Migration history mismatch (fix before the next `db push`):** 0007 was applied outside the CLI, so Supabase
-  records it as `20261111212656`, not `0007`. `npx supabase migration list --remote` shows local `0007` as unapplied,
-  and the timestamp has no local file. The function itself is live and correct. To fix the bookkeeping only (with
-  Jose's OK, since it writes to production metadata):
-  `npx supabase migration repair 20261111212656 --status reverted --remote --yes`, then
-  `npx supabase migration repair 0007 --status applied --remote --yes`.
+- **Migration history: fixed 2026-11-11.** 0007 had been applied outside the CLI (recorded as `20261111212656`).
+  Repaired with `migration repair` (timestamp → reverted, `0007` → applied); local and remote now list 0001–0007 and
+  `db push --dry-run` is up to date. **Always apply migrations with `npx supabase db push --remote`**, never the
+  connector's `apply_migration`, which records a timestamp instead of the file's number.
 - **No new confirmations since Nov 6** (cursor at row 96,750). Either the Download tab hasn't been updated or the 23:00
   sync isn't adding rows. The bridge only writes when there are new rows. Check with `status()` in Apps Script, or the
   executions list there.
