@@ -77,6 +77,12 @@ Full spec: `docs/inventarioConf-v1-plan.md`. Put it in the repo first.
    - Upserts on `src_key`, updates the cursor, and returns `{received, inserted, duplicates}`.
 6. **Secrets:** `INGEST_SECRET`, `IC_ADMIN_PIN`. Set them with `supabase secrets set`, never commit them.
 
+7. **Tiers in Masterview** (cross-repo, small):
+   - Migration `0003_mv_tiers.sql`: `alter table mv_product_city add column tiers text;`. This applies to the shared table, so coordinate it with the unify-Masterview plan.
+   - **In the `calii-invoice-reader` repo:** the Masterview admin upload maps the `Tiers` header into `mv_product_city.tiers` for each city. Run it in a separate Claude Code session in that repo.
+   - Re-upload the 4 city files once, then check that Monterrey has tiers for the bulk of its SKUs and that a few spot-checks match `Download`.
+   - Add `ic_hub_config.city` (monterrey | saltillo | cdmx | guadalajara) to the seed.
+
 ## 0.3 Apps Script bridge (in Jose's Google account)
 
 - A new standalone Apps Script project, "Calii Sheet Bridge", with `apps-script/bridge.gs` copied in. Keep the repo copy as the source of truth.
