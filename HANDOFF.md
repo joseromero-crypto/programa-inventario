@@ -225,6 +225,14 @@ Generator details: `src/generator/README.md`.
 
 ## Next: phase 3 — Seguimiento and the weekly close (suggested)
 - Seguimiento per location: done / late / pending / done by another role, from `ic_conf_events` vs the active plan.
+  Jose asked for two views (2026-11-11):
+  - **By shelf:** every shelf of the hub, grouped by aisle (tap an aisle to open its shelves). Each shelf shows when
+    it is scheduled, who is assigned, its status, and who actually confirmed it and when. v1 is an interactive list;
+    a floor map of the hub would be the ideal later version.
+  - **By day:** that day's shelves per person, each marked done or pending as confirmations arrive.
+  - Freshness: at least daily (bridge trigger at 23:00 today). Show the data's age on screen. Hourly is an option.
+- Found 2026-11-11: no confirmation events after Nov 6 (local) for any hub; the sheet row count is unchanged at
+  96,750. Either nothing was confirmed this week or the sheet/bridge stopped. Check with Jose before building on it.
 - Weekly close (spec 5.2): revisits, new/removed locations, layer 4 refresh, past and current weeks locked.
 - Configuración hub (roles, capacities, rules with live preview, walking order).
 
