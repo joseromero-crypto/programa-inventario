@@ -231,8 +231,10 @@ Generator details: `src/generator/README.md`.
     a floor map of the hub would be the ideal later version.
   - **By day:** that day's shelves per person, each marked done or pending as confirmations arrive.
   - Freshness: at least daily (bridge trigger at 23:00 today). Show the data's age on screen. Hourly is an option.
-- Found 2026-11-11: no confirmation events after Nov 6 (local) for any hub; the sheet row count is unchanged at
-  96,750. Either nothing was confirmed this week or the sheet/bridge stopped. Check with Jose before building on it.
+- Found 2026-11-11: no confirmation events after Nov 6 (local) for any hub. Cause (Jose): hubs did confirm, but the
+  sheet is filled by a manual upload to Drive by Jose's boss, which hadn't been done yet. So Seguimiento is only as
+  fresh as that upload, not the 23:00 bridge. The screen must show the date of the latest confirmation it has, and
+  "late" must not be judged on days the data doesn't cover yet.
 - Weekly close (spec 5.2): revisits, new/removed locations, layer 4 refresh, past and current weeks locked.
 - Configuración hub (roles, capacities, rules with live preview, walking order).
 
