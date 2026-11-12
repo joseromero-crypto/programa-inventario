@@ -10,8 +10,9 @@ Generator details: `src/generator/README.md`.
   active yet:** Jose activates it in Plan › Activar with the admin PIN. Until then Ruta del día says "no tiene un plan
   activo".
 - **Not built:** Seguimiento, the weekly close, Configuración hub.
-- **Not pushed:** everything after `dc706f2` is local only. The screens go live when Jose pushes from GitHub Desktop.
-  The database side (0008, `ic-admin`) is already live, so the pushed site will work as soon as it builds.
+- **Pushed** by Jose on 2026-11-12: Plan and Ruta del día are on the live site.
+- **Week labels (Jose, 2026-11-12):** until launch, screens name weeks "Semana 1–4" plus the weekday, not calendar
+  dates. Calendar dates come in at launch. See the phase 3 brief.
 - `npm test`: 107 passing. `npm run build`: green.
 - **Local preview:** `.claude/launch.json` → `dev` on port 5180 (moves to 5181 when 5180 is taken).
 
@@ -237,6 +238,9 @@ Generator details: `src/generator/README.md`.
   "late" must not be judged on days the data doesn't cover yet.
 - Weekly close (spec 5.2): revisits, new/removed locations, layer 4 refresh, past and current weeks locked.
 - Configuración hub (roles, capacities, rules with live preview, walking order).
+
+### Phase 3 brief (prompt Jose runs in a new task)
+The prompt Jose pastes is kept in the chat of 2026-11-12; its content is the bullets above plus the week-label rule.
 
 ## Phase 2 brief (done; kept for reference)
 Prompt Jose will run in a new task:
